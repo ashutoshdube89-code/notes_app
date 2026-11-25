@@ -4,7 +4,7 @@ class Note {
   final String body;
   final DateTime updatedAt;
 
-  Note({
+  const Note({
     required this.id,
     required this.title,
     required this.body,
@@ -37,9 +37,10 @@ class Note {
   factory Note.fromJson(Map<String, dynamic> json) {
     return Note(
       id: json['id'] as String,
-      title: json['title'] as String,
-      body: json['body'] as String,
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      title: json['title'] as String? ?? '',
+      body: json['body'] as String? ?? '',
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+          DateTime.now(),
     );
   }
 }

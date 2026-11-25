@@ -4,10 +4,7 @@ import '../models/note.dart';
 class NoteEditorScreen extends StatefulWidget {
   final Note? existingNote;
 
-  const NoteEditorScreen({
-    super.key,
-    this.existingNote,
-  });
+  const NoteEditorScreen({super.key, this.existingNote});
 
   @override
   State<NoteEditorScreen> createState() => _NoteEditorScreenState();
@@ -16,8 +13,6 @@ class NoteEditorScreen extends StatefulWidget {
 class _NoteEditorScreenState extends State<NoteEditorScreen> {
   late final TextEditingController _titleController;
   late final TextEditingController _bodyController;
-
-  bool get _isEditing => widget.existingNote != null;
 
   @override
   void initState() {
@@ -39,19 +34,19 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
     if (title.isEmpty && body.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Write a title or some note text first')),
+        const SnackBar(content: Text('Please enter a title or note content.')),
       );
       return;
     }
 
     final now = DateTime.now();
-    final note = _isEditing
+    final note = widget.existingNote != null
         ? widget.existingNote!.copyWith(
             title: title,
             body: body,
             updatedAt: now,
           )
-: Note(
+        : Note(
             id: now.microsecondsSinceEpoch.toString(),
             title: title,
             body: body,
@@ -63,9 +58,11 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.existingNote != null;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Note' : 'New Note'),
+        title: Text(isEditing ? 'Edit Note' : 'New Note'),
         actions: [
           IconButton(
             icon: const Icon(Icons.check),
@@ -80,29 +77,25 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           children: [
             TextField(
               controller: _titleController,
+              textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
                 hintText: 'Title',
                 border: InputBorder.none,
               ),
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-              textCapitalization: TextCapitalization.sentences,
-              textInputAction: TextInputAction.next,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const Divider(),
             Expanded(
               child: TextField(
                 controller: _bodyController,
-                decoration: const InputDecoration(
-                  hintText: 'Start typing your note...',
-                  border: InputBorder.none,
-                ),
-                style: Theme.of(context).textTheme.bodyLarge,
                 textCapitalization: TextCapitalization.sentences,
                 maxLines: null,
                 expands: true,
-                keyboardType: TextInputType.multiline,
+                textAlignVertical: TextAlignVertical.top,
+                decoration: const InputDecoration(
+                  hintText: 'Write your note here...',
+                  border: InputBorder.none,
+                ),
               ),
             ),
           ],
