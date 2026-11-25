@@ -20,17 +20,39 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final NotesStorage _storage = NotesStorage();
+  final TextEditingController _searchController = TextEditingController();
   List<Note> _notes = [];
+  String _searchQuery = '';
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _loadNotes();
+    _searchController.addListener(() {
+      if (!mounted) return;
+      setState(() {
+        _searchQuery = _searchController.text;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _sortNotesNewestFirst(List<Note> list) {
     list.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+  }
+
+  List<Note> get _filteredNotes {
+    final query = _searchQuery.trim().toLowerCase();
+    if (query.isEmpty) return _notes;
+    return _notes
+        .where((note) => note.title.toLowerCase().contains(query))
+        .toList();
   }
 
   Future<void> _loadNotes() async {
@@ -101,8 +123,81 @@ class _HomeScreenState extends State<HomeScreen> {
     };
   }
 
+  Widget _buildEmptyState() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.note_alt_outlined, size: 56),
+            SizedBox(height: 12),
+            Text(
+              'No notes yet',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 6),
+            Text(
+              'Tap + to create your first note.',
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+      child: TextField(
+        controller: _searchController,
+        textInputAction: TextInputAction.search,
+        decoration: InputDecoration(
+          hintText: 'Search notes by title...',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  tooltip: 'Clear search',
+                  onPressed: () => _searchController.clear(),
+                )
+              : null,
+          filled: true,
+          contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoSearchResults() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.search_off, size: 48),
+            const SizedBox(height: 10),
+            Text(
+              'No notes matching "$_searchQuery"',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final visibleNotes = _filteredNotes;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notes'),
@@ -117,38 +212,27 @@ class _HomeScreenState extends State<HomeScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _notes.isEmpty
-              ? const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.note_alt_outlined, size: 56),
-                        SizedBox(height: 12),
-                        Text(
-                          'No notes yet',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                        ),
-                        SizedBox(height: 6),
-                        Text(
-                          'Tap + to create your first note.',
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+              ? _buildEmptyState()
+              : Column(
+                  children: [
+                    _buildSearchBar(),
+                    Expanded(
+                      child: visibleNotes.isEmpty
+                          ? _buildNoSearchResults()
+                          : ListView.builder(
+                              padding: const EdgeInsets.only(top: 4, bottom: 80),
+                              itemCount: visibleNotes.length,
+                              itemBuilder: (context, index) {
+                                final note = visibleNotes[index];
+                                return NoteCard(
+                                  note: note,
+                                  onTap: () => _openEditor(note: note),
+                                  onDelete: () => _deleteNote(note),
+                                );
+                              },
+                            ),
                     ),
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.only(top: 8, bottom: 80),
-                  itemCount: _notes.length,
-                  itemBuilder: (context, index) {
-                    final note = _notes[index];
-                    return NoteCard(
-                      note: note,
-                      onTap: () => _openEditor(note: note),
-                      onDelete: () => _deleteNote(note),
-                    );
-                  },
+                  ],
                 ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _openEditor(),
